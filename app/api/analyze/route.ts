@@ -108,25 +108,91 @@ ${truncatedText}
         });
 
         const responseText = completion.choices[0].message.content || '{}';
-
-        // Parse the JSON response
         const data = JSON.parse(responseText);
 
         return {
             url,
-            keywords: Array.isArray(data.keywords) ? data.keywords : [],
-            negativeKeywords: Array.isArray(data.negativeKeywords) ? data.negativeKeywords : [],
+            keywords: data.keywords || [],
+            negativeKeywords: data.negativeKeywords || [],
             status: 'success'
         };
 
-    } catch (error) {
-        console.error(`Error analyzing ${url}:`, error);
+    } catch (error: any) {
+        console.error(`Error analyzing URL ${url}:`, error);
         return {
             url,
             keywords: [],
             negativeKeywords: [],
             status: 'failed',
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
+            error: error.message || 'Analysis failed'
+        };
+    }
+}
+
+// Expand a list of seed keywords
+async function expandKeywords(seedKeywords: string[], focus?: string, audience?: string, region?: string, timeframe?: string): Promise<AnalysisResult> {
+    try {
+        const prompt = `
+Context & Data:
+Seed Keywords: ${seedKeywords.join(', ')}
+Campaign Focus/Goal: ${focus || 'General Traffic'}
+Target Audience: ${audience || 'General Audience'}
+Target Region: ${region || 'Global'}
+Timeframe/Seasonality: ${timeframe || 'General / Evergreen'}
+
+The Task:
+Please analyze the provided seed keywords to understand the core topic and intent. Based on this, generate a list of 30 NEW, high-potential Google Ads keywords that expand on these ideas. Do not just repeat the seed keywords; find related long-tail variations, synonyms, and specific intent queries.
+
+Apply the following parameters to your generation:
+1. Search Intent: Focus primarily on Transactional and Commercial intent.
+2. Localization: Prioritize spelling and terminology relevant to the Target Region (e.g. "trousers" vs "pants").
+3. Seasonality: Prioritize keywords relevant to the Timeframe/Season (e.g. "winter coats" vs "jackets").
+4. Exclusions (Negative Keywords): Identify 5-10 terms that are semantically related but likely unprofitable (e.g., "free," "second hand," "definition") and list them separately.
+
+Output Format:
+Return a JSON object with two properties:
+1. "keywords": An array of objects, each with:
+   - "keyword": The actual search term.
+   - "matchType": Recommended match type (Exact, Phrase, or Broad).
+   - "funnelStage": (Awareness, Consideration, Conversion).
+   - "volumePotential": Estimate the search volume potential (High, Medium, Low) based on general popularity.
+2. "negativeKeywords": An array of strings (the negative keywords).
+`;
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are an expert Google Ads keyword researcher. You expand keyword lists to find high-converting opportunities with proper match types and funnel stages. Always respond with valid JSON."
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.7,
+        });
+
+        const responseText = completion.choices[0].message.content || '{}';
+        const data = JSON.parse(responseText);
+
+        return {
+            url: 'Keyword Expansion', // Placeholder for UI consistency
+            keywords: data.keywords || [],
+            negativeKeywords: data.negativeKeywords || [],
+            status: 'success'
+        };
+
+    } catch (error: any) {
+        console.error(`Error expanding keywords:`, error);
+        return {
+            url: 'Keyword Expansion',
+            keywords: [],
+            negativeKeywords: [],
+            status: 'failed',
+            error: error.message || 'Expansion failed'
         };
     }
 }
@@ -142,19 +208,25 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { urls, focus, audience } = body;
+        const { urls, seedKeywords, focus, audience, region, timeframe } = body;
 
-        // Validate input
+        // Handle Keyword Expansion Request
+        if (seedKeywords && Array.isArray(seedKeywords) && seedKeywords.length > 0) {
+            const result = await expandKeywords(seedKeywords, focus, audience, region, timeframe);
+            return NextResponse.json({ results: [result] });
+        }
+
+        // Handle URL Analysis Request
         if (!urls || !Array.isArray(urls) || urls.length === 0) {
             return NextResponse.json(
-                { error: 'Invalid or missing URLs' },
+                { error: 'Invalid or missing URLs/Keywords' },
                 { status: 400 }
             );
         }
 
         // Process all URLs
         const results = await Promise.all(
-            urls.map(url => analyzeURL(url, focus, audience))
+            urls.map(url => analyzeURL(url, focus, audience, region, timeframe))
         );
 
         return NextResponse.json({ results });

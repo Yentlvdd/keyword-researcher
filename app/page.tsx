@@ -49,6 +49,9 @@ const Icons = {
   Filter: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
   ),
+  Expand: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" x2="14" y1="3" y2="10" /><line x1="3" x2="10" y1="21" y2="14" /></svg>
+  ),
   Info: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" /></svg>
   )
@@ -67,7 +70,8 @@ export default function Home() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [funnelFilter, setFunnelFilter] = useState<string>('all');
   const [removedKeywords, setRemovedKeywords] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'info'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'expander' | 'info'>('dashboard');
+  const [seedKeywords, setSeedKeywords] = useState('');
 
   const formatKeyword = (keyword: string, type: 'broad' | 'phrase' | 'exact') => {
     switch (type) {
@@ -84,19 +88,35 @@ export default function Home() {
     setError('');
     setResults([]);
 
-    if (!urls.trim()) {
-      setError('Please enter at least one URL');
-      return;
-    }
+    let payload: any = {
+      focus: focus.trim(),
+      audience: audience.trim(),
+      region: region.trim(),
+      timeframe: timeframe.trim(),
+    };
 
-    const urlList = urls
-      .split('\n')
-      .map(url => url.trim())
-      .filter(url => url.length > 0);
-
-    if (urlList.length === 0) {
-      setError('Please enter at least one valid URL');
-      return;
+    if (activeTab === 'dashboard') {
+      if (!urls.trim()) {
+        setError('Please enter at least one URL');
+        return;
+      }
+      const urlList = urls.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+      if (urlList.length === 0) {
+        setError('Please enter at least one valid URL');
+        return;
+      }
+      payload.urls = urlList;
+    } else if (activeTab === 'expander') {
+      if (!seedKeywords.trim()) {
+        setError('Please enter at least one seed keyword');
+        return;
+      }
+      const keywordList = seedKeywords.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+      if (keywordList.length === 0) {
+        setError('Please enter at least one valid keyword');
+        return;
+      }
+      payload.seedKeywords = keywordList;
     }
 
     setLoading(true);
@@ -107,13 +127,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          urls: urlList,
-          focus: focus.trim(),
-          audience: audience.trim(),
-          region: region.trim(),
-          timeframe: timeframe.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -225,6 +239,16 @@ export default function Home() {
             Keyword Discovery
           </button>
           <button
+            onClick={() => setActiveTab('expander')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'expander'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-slate-600 hover:bg-slate-50'
+              }`}
+          >
+            <Icons.Expand />
+            Keyword Expander
+          </button>
+          <button
             onClick={() => setActiveTab('info')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'info'
               ? 'bg-blue-50 text-blue-600'
@@ -308,8 +332,14 @@ export default function Home() {
             {/* Header */}
             <div className="flex justify-between items-start mb-10">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-1">Overview & Selection</h1>
-                <p className="text-slate-500">Manage your keyword discovery campaigns and sources.</p>
+                <h1 className="text-2xl font-bold text-slate-900 mb-1">
+                  {activeTab === 'expander' ? 'Keyword Expander' : 'Overview & Selection'}
+                </h1>
+                <p className="text-slate-500">
+                  {activeTab === 'expander'
+                    ? 'Expand your keyword list with high-potential variations.'
+                    : 'Manage your keyword discovery campaigns and sources.'}
+                </p>
               </div>
 
               <div className="flex gap-3">
@@ -408,9 +438,9 @@ export default function Home() {
 
               <button
                 onClick={handleAnalyze}
-                disabled={loading || !urls.trim()}
+                disabled={loading || (activeTab === 'expander' ? !seedKeywords.trim() : !urls.trim())}
                 className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-lg shadow-blue-500/20 transition-all
-                ${loading || !urls.trim()
+                ${loading || (activeTab === 'expander' ? !seedKeywords.trim() : !urls.trim())
                     ? 'bg-slate-300 cursor-not-allowed shadow-none'
                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/40 active:scale-[0.98]'
                   }`}
@@ -421,10 +451,10 @@ export default function Home() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Analyzing...
+                    {activeTab === 'expander' ? 'Expanding Keywords...' : 'Analyzing Sources...'}
                   </span>
                 ) : (
-                  'Analyze Sources'
+                  activeTab === 'expander' ? 'Expand Keywords' : 'Analyze Sources'
                 )}
               </button>
             </div>
@@ -435,16 +465,32 @@ export default function Home() {
               <div className="lg:col-span-1">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-full flex flex-col">
                   <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-900">Input Sources</h3>
-                    <span className="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-700">Clear All</span>
+                    <h3 className="font-bold text-slate-900">
+                      {activeTab === 'expander' ? 'Seed Keywords' : 'Input Sources'}
+                    </h3>
+                    <span
+                      className="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-700"
+                      onClick={() => activeTab === 'expander' ? setSeedKeywords('') : setUrls('')}
+                    >
+                      Clear All
+                    </span>
                   </div>
                   <div className="p-4 flex-1">
-                    <textarea
-                      value={urls}
-                      onChange={(e) => setUrls(e.target.value)}
-                      placeholder="Paste URLs here (one per line)..."
-                      className="w-full h-full min-h-[300px] p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm font-mono text-slate-600"
-                    />
+                    {activeTab === 'expander' ? (
+                      <textarea
+                        value={seedKeywords}
+                        onChange={(e) => setSeedKeywords(e.target.value)}
+                        placeholder="Enter seed keywords (one per line)..."
+                        className="w-full h-full min-h-[300px] p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm font-mono text-slate-600"
+                      />
+                    ) : (
+                      <textarea
+                        value={urls}
+                        onChange={(e) => setUrls(e.target.value)}
+                        placeholder="Paste URLs here (one per line)..."
+                        className="w-full h-full min-h-[300px] p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm font-mono text-slate-600"
+                      />
+                    )}
                   </div>
                   {error && (
                     <div className="p-4 bg-red-50 border-t border-red-100 text-red-600 text-sm">
