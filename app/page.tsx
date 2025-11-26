@@ -217,8 +217,8 @@ export default function Home() {
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'dashboard'
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-slate-600 hover:bg-slate-50'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-slate-600 hover:bg-slate-50'
               }`}
           >
             <Icons.Dashboard />
@@ -227,8 +227,8 @@ export default function Home() {
           <button
             onClick={() => setActiveTab('info')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'info'
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-slate-600 hover:bg-slate-50'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-slate-600 hover:bg-slate-50'
               }`}
           >
             <Icons.Info />
@@ -246,40 +246,40 @@ export default function Home() {
         {activeTab === 'info' ? (
           <div className="max-w-3xl mx-auto space-y-8">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">How to use KeywordAgent</h1>
-              <p className="text-slate-500">A simple guide to getting the best results.</p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Hoe gebruik je KeywordAgent</h1>
+              <p className="text-slate-500">Een eenvoudige gids voor de beste resultaten.</p>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm space-y-8">
               <section className="space-y-4">
                 <div className="flex items-center gap-3 text-blue-600 mb-2">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold">1</div>
-                  <h2 className="text-lg font-bold text-slate-900">Analyze Your Content</h2>
+                  <h2 className="text-lg font-bold text-slate-900">Analyseer je Content</h2>
                 </div>
                 <p className="text-slate-600 ml-11">
-                  Paste your landing page URLs into the input box. You can add optional context like your
-                  <strong> Campaign Focus</strong>, <strong>Target Audience</strong>, <strong>Region</strong>, and <strong>Season</strong> to get more relevant results.
+                  Plak je landingspagina URL's in het invoerveld. Je kunt optionele context toevoegen zoals
+                  <strong> Campagne Focus</strong>, <strong>Doelgroep</strong>, <strong>Regio</strong> en <strong>Seizoen</strong> voor relevantere resultaten.
                 </p>
               </section>
 
               <section className="space-y-4">
                 <div className="flex items-center gap-3 text-blue-600 mb-2">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold">2</div>
-                  <h2 className="text-lg font-bold text-slate-900">Refine & Filter</h2>
+                  <h2 className="text-lg font-bold text-slate-900">Verfijn & Filter</h2>
                 </div>
                 <p className="text-slate-600 ml-11">
-                  Use the <strong>Funnel Stage</strong> filters (Awareness, Consideration, Conversion) to find keywords for specific parts of the buyer's journey.
-                  Remove any irrelevant keywords using the <span className="inline-flex items-center gap-1 text-red-400"><Icons.Trash /></span> icon.
+                  Gebruik de <strong>Funnel Fase</strong> filters (Awareness, Consideration, Conversion) om zoekwoorden te vinden voor specifieke delen van de klantreis.
+                  Verwijder irrelevante zoekwoorden met het <span className="inline-flex items-center gap-1 text-red-400"><Icons.Trash /></span> icoon.
                 </p>
               </section>
 
               <section className="space-y-4">
                 <div className="flex items-center gap-3 text-blue-600 mb-2">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold">3</div>
-                  <h2 className="text-lg font-bold text-slate-900">Export for Google Ads</h2>
+                  <h2 className="text-lg font-bold text-slate-900">Exporteer voor Google Ads</h2>
                 </div>
                 <p className="text-slate-600 ml-11">
-                  Select your desired <strong>Match Type</strong> (Broad, "Phrase", [Exact]). Click <strong>Copy Keywords</strong> to get a clean, newline-separated list ready to paste directly into Google Ads Editor.
+                  Selecteer het gewenste <strong>Zoektype</strong> (Broad, "Phrase", [Exact]). Klik op <strong>Kopieer Zoekwoorden</strong> om een schone lijst te krijgen die je direct in Google Ads Editor kunt plakken.
                 </p>
               </section>
             </div>
@@ -289,13 +289,13 @@ export default function Home() {
                 <Icons.Info />
               </div>
               <div>
-                <h3 className="font-bold text-amber-900 mb-1">Important Note on Search Volumes</h3>
+                <h3 className="font-bold text-amber-900 mb-1">Belangrijke opmerking over Zoekvolumes</h3>
                 <p className="text-amber-800 text-sm leading-relaxed">
-                  The "Est. Volume" shown in this tool is an AI-generated estimate of potential (High/Medium/Low) based on general popularity.
-                  <strong> AI cannot access real-time search volume data.</strong>
+                  Het "Geschat Volume" in deze tool is een AI-gegenereerde schatting van potentie (Hoog/Midden/Laag) op basis van algemene populariteit.
+                  <strong> AI heeft geen toegang tot real-time zoekvolume data.</strong>
                 </p>
                 <p className="text-amber-800 text-sm leading-relaxed mt-2">
-                  For accurate, real-time search volume numbers and cost-per-click estimates, please copy your generated keyword list and paste it into the
+                  Voor nauwkeurige, real-time zoekvolumes en cost-per-click schattingen, kopieer je gegenereerde zoekwoordenlijst en plak deze in de
                   <a href="https://ads.google.com/home/tools/keyword-planner/" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-amber-950 ml-1">
                     Google Ads Keyword Planner
                   </a>.
