@@ -197,6 +197,77 @@ Return a JSON object with two properties:
     }
 }
 
+// Check seasonality for a given topic
+async function checkSeasonality(type: string, focus: string, context?: string): Promise<AnalysisResult> {
+    try {
+        const prompt = `
+Context & Data:
+Seasonality Type/Goal: ${type} (e.g., search trends, shopping behavior)
+Focus Topic/Keywords: ${focus}
+Additional Context: ${context || 'None'}
+
+The Task:
+Please analyze the seasonality and trends for the provided focus topic, specifically looking at the requested "Seasonality Type".
+Provide a detailed breakdown of when interest peaks, when it drops, and specific behavioral patterns.
+
+Output Format:
+Return a JSON object with the following structure:
+{
+  "seasonality": {
+    "summary": "A brief 2-3 sentence summary of the overall trend.",
+    "peakMonths": ["Month 1", "Month 2"],
+    "lowMonths": ["Month 1", "Month 2"],
+    "trends": [
+      { "period": "e.g. Q4 / Winter", "description": "Specific behavior or trend details..." },
+      { "period": "e.g. Summer", "description": "..." }
+    ],
+    "insights": [
+      "Key insight about user behavior...",
+      "Another actionable insight..."
+    ]
+  }
+}
+`;
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are an expert market researcher specializing in seasonality and consumer trends. Always respond with valid JSON."
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.7,
+        });
+
+        const responseText = completion.choices[0].message.content || '{}';
+        const data = JSON.parse(responseText);
+
+        return {
+            url: 'Seasonality Analysis',
+            keywords: [], // Not used for this view
+            negativeKeywords: [],
+            seasonality: data.seasonality, // New field
+            status: 'success'
+        };
+
+    } catch (error: any) {
+        console.error(`Error checking seasonality:`, error);
+        return {
+            url: 'Seasonality Analysis',
+            keywords: [],
+            negativeKeywords: [],
+            status: 'failed',
+            error: error.message || 'Seasonality check failed'
+        };
+    }
+}
+
 export async function POST(request: NextRequest) {
     try {
         // Check if API key is configured
@@ -208,7 +279,13 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { urls, seedKeywords, focus, audience, region, timeframe } = body;
+        const { urls, seedKeywords, focus, audience, region, timeframe, seasonalityType, seasonalityFocus, seasonalityContext } = body;
+
+        // Handle Seasonality Check Request
+        if (seasonalityType && seasonalityFocus) {
+            const result = await checkSeasonality(seasonalityType, seasonalityFocus, seasonalityContext);
+            return NextResponse.json({ results: [result] });
+        }
 
         // Handle Keyword Expansion Request
         if (seedKeywords && Array.isArray(seedKeywords) && seedKeywords.length > 0) {

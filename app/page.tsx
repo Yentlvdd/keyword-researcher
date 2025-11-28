@@ -13,6 +13,13 @@ interface AnalysisResult {
   url: string;
   keywords: KeywordData[];
   negativeKeywords: string[];
+  seasonality?: {
+    summary: string;
+    peakMonths: string[];
+    lowMonths: string[];
+    trends: { period: string; description: string }[];
+    insights: string[];
+  };
   status: 'success' | 'failed';
   error?: string;
 }
@@ -52,6 +59,9 @@ const Icons = {
   Expand: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" x2="14" y1="3" y2="10" /><line x1="3" x2="10" y1="21" y2="14" /></svg>
   ),
+  Calendar: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+  ),
   Info: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" /></svg>
   )
@@ -70,8 +80,13 @@ export default function Home() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [funnelFilter, setFunnelFilter] = useState<string>('all');
   const [removedKeywords, setRemovedKeywords] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'expander' | 'info'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'expander' | 'seasonality' | 'info'>('dashboard');
   const [seedKeywords, setSeedKeywords] = useState('');
+
+  // Seasonality State
+  const [seasonalityType, setSeasonalityType] = useState('');
+  const [seasonalityFocus, setSeasonalityFocus] = useState('');
+  const [seasonalityContext, setSeasonalityContext] = useState('');
 
   const formatKeyword = (keyword: string, type: 'broad' | 'phrase' | 'exact') => {
     switch (type) {
@@ -117,6 +132,14 @@ export default function Home() {
         return;
       }
       payload.seedKeywords = keywordList;
+    } else if (activeTab === 'seasonality') {
+      if (!seasonalityType.trim() || !seasonalityFocus.trim()) {
+        setError('Please fill in the Explanation and Focus fields');
+        return;
+      }
+      payload.seasonalityType = seasonalityType;
+      payload.seasonalityFocus = seasonalityFocus;
+      payload.seasonalityContext = seasonalityContext;
     }
 
     setLoading(true);
@@ -249,6 +272,16 @@ export default function Home() {
             Keyword Expander
           </button>
           <button
+            onClick={() => setActiveTab('seasonality')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'seasonality'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-slate-600 hover:bg-slate-50'
+              }`}
+          >
+            <Icons.Calendar />
+            Seasonality Checker
+          </button>
+          <button
             onClick={() => setActiveTab('info')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'info'
               ? 'bg-blue-50 text-blue-600'
@@ -333,325 +366,455 @@ export default function Home() {
             <div className="flex justify-between items-start mb-10">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 mb-1">
-                  {activeTab === 'expander' ? 'Keyword Expander' : 'Overview & Selection'}
+                  {activeTab === 'expander' ? 'Keyword Expander' :
+                    activeTab === 'seasonality' ? 'Seasonality Checker' :
+                      'Overview & Selection'}
                 </h1>
                 <p className="text-slate-500">
-                  {activeTab === 'expander'
-                    ? 'Expand your keyword list with high-potential variations.'
-                    : 'Manage your keyword discovery campaigns and sources.'}
+                  {activeTab === 'expander' ? 'Expand your keyword list with high-potential variations.' :
+                    activeTab === 'seasonality' ? 'Analyze trends and seasonal behavior for your topics.' :
+                      'Manage your keyword discovery campaigns and sources.'}
                 </p>
               </div>
 
-              <div className="flex gap-3">
-                <div className="flex bg-white border border-slate-200 rounded-lg p-1">
-                  <button
-                    onClick={() => setMatchType('broad')}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${matchType === 'broad'
-                      ? 'bg-blue-50 text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                  >
-                    Broad
-                  </button>
-                  <button
-                    onClick={() => setMatchType('phrase')}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${matchType === 'phrase'
-                      ? 'bg-blue-50 text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                  >
-                    "Phrase"
-                  </button>
-                  <button
-                    onClick={() => setMatchType('exact')}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${matchType === 'exact'
-                      ? 'bg-blue-50 text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                  >
-                    [Exact]
-                  </button>
-                </div>
-                <button
-                  onClick={handleDownloadCSV}
-                  disabled={results.length === 0}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Icons.Download />
-                  CSV
-                </button>
-              </div>
-            </div>
-
-            {/* Configuration Card */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Campaign Focus</label>
-                    <input
-                      type="text"
-                      value={focus}
-                      onChange={(e) => setFocus(e.target.value)}
-                      placeholder="e.g. Sell Winter Jackets"
-                      className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Target Audience</label>
-                    <input
-                      type="text"
-                      value={audience}
-                      onChange={(e) => setAudience(e.target.value)}
-                      placeholder="e.g. Outdoor enthusiasts"
-                      className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Target Region</label>
-                      <input
-                        type="text"
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        placeholder="e.g. UK, USA, Global"
-                        className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Timeframe/Season</label>
-                      <input
-                        type="text"
-                        value={timeframe}
-                        onChange={(e) => setTimeframe(e.target.value)}
-                        placeholder="e.g. Q4, Christmas"
-                        className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={handleAnalyze}
-                disabled={loading || (activeTab === 'expander' ? !seedKeywords.trim() : !urls.trim())}
-                className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-lg shadow-blue-500/20 transition-all
-                ${loading || (activeTab === 'expander' ? !seedKeywords.trim() : !urls.trim())
-                    ? 'bg-slate-300 cursor-not-allowed shadow-none'
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/40 active:scale-[0.98]'
-                  }`}
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {activeTab === 'expander' ? 'Expanding Keywords...' : 'Analyzing Sources...'}
-                  </span>
-                ) : (
-                  activeTab === 'expander' ? 'Expand Keywords' : 'Analyze Sources'
-                )}
-              </button>
-            </div>
-
-            {/* Input & Results Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Input Column */}
-              <div className="lg:col-span-1">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-full flex flex-col">
-                  <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-900">
-                      {activeTab === 'expander' ? 'Seed Keywords' : 'Input Sources'}
-                    </h3>
-                    <span
-                      className="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-700"
-                      onClick={() => activeTab === 'expander' ? setSeedKeywords('') : setUrls('')}
+              {activeTab !== 'seasonality' && (
+                <div className="flex gap-3">
+                  <div className="flex bg-white border border-slate-200 rounded-lg p-1">
+                    <button
+                      onClick={() => setMatchType('broad')}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${matchType === 'broad'
+                        ? 'bg-blue-50 text-blue-600 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
                     >
-                      Clear All
-                    </span>
+                      Broad
+                    </button>
+                    <button
+                      onClick={() => setMatchType('phrase')}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${matchType === 'phrase'
+                        ? 'bg-blue-50 text-blue-600 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      "Phrase"
+                    </button>
+                    <button
+                      onClick={() => setMatchType('exact')}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${matchType === 'exact'
+                        ? 'bg-blue-50 text-blue-600 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      [Exact]
+                    </button>
                   </div>
-                  <div className="p-4 flex-1">
-                    {activeTab === 'expander' ? (
-                      <textarea
-                        value={seedKeywords}
-                        onChange={(e) => setSeedKeywords(e.target.value)}
-                        placeholder="Enter seed keywords (one per line)..."
-                        className="w-full h-full min-h-[300px] p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm font-mono text-slate-600"
-                      />
-                    ) : (
-                      <textarea
-                        value={urls}
-                        onChange={(e) => setUrls(e.target.value)}
-                        placeholder="Paste URLs here (one per line)..."
-                        className="w-full h-full min-h-[300px] p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm font-mono text-slate-600"
-                      />
-                    )}
-                  </div>
-                  {error && (
-                    <div className="p-4 bg-red-50 border-t border-red-100 text-red-600 text-sm">
-                      {error}
-                    </div>
-                  )}
+                  <button
+                    onClick={handleDownloadCSV}
+                    disabled={results.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Icons.Download />
+                    CSV
+                  </button>
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Results Columns */}
-              <div className="lg:col-span-2 space-y-6">
-                {results.length > 0 ? (
-                  <section className="space-y-6">
-                    {/* Filter Buttons */}
-                    <div className="flex items-center gap-2 bg-white rounded-lg border border-slate-200 p-2 shadow-sm">
-                      <Icons.Filter />
-                      <span className="text-sm font-medium text-slate-600">Filter by stage:</span>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => setFunnelFilter('all')}
-                          className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'all'
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                        >
-                          All
-                        </button>
-                        <button
-                          onClick={() => setFunnelFilter('awareness')}
-                          className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'awareness'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                            }`}
-                        >
-                          Awareness
-                        </button>
-                        <button
-                          onClick={() => setFunnelFilter('consideration')}
-                          className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'consideration'
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
-                            }`}
-                        >
-                          Consideration
-                        </button>
-                        <button
-                          onClick={() => setFunnelFilter('conversion')}
-                          className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'conversion'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-green-50 text-green-600 hover:bg-green-100'
-                            }`}
-                        >
-                          Conversion
-                        </button>
+            {activeTab === 'seasonality' ? (
+              <div className="space-y-8">
+                {/* Seasonality Input Card */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Explanation of Seasonality Check
+                      </label>
+                      <textarea
+                        value={seasonalityType}
+                        onChange={(e) => setSeasonalityType(e.target.value)}
+                        placeholder="e.g. I want to understand the search trends for winter clothing, specifically when people start looking for jackets vs coats."
+                        className="w-full p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none min-h-[100px] text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Focus Keyword(s)
+                        </label>
+                        <input
+                          type="text"
+                          value={seasonalityFocus}
+                          onChange={(e) => setSeasonalityFocus(e.target.value)}
+                          placeholder="e.g. Winter Jackets"
+                          className="w-full p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Optional Context
+                        </label>
+                        <input
+                          type="text"
+                          value={seasonalityContext}
+                          onChange={(e) => setSeasonalityContext(e.target.value)}
+                          placeholder="e.g. Target market is UK"
+                          className="w-full p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={loading || !seasonalityType.trim() || !seasonalityFocus.trim()}
+                      className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-lg shadow-blue-500/20 transition-all
+                        ${loading || !seasonalityType.trim() || !seasonalityFocus.trim()
+                          ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/40 active:scale-[0.98]'
+                        }`}
+                    >
+                      {loading ? 'Analyzing Trends...' : 'Check Seasonality'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Seasonality Results */}
+                {results.length > 0 && results[0].seasonality && (
+                  <div className="space-y-6">
+                    {/* Summary Card */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                      <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <Icons.Info /> Analysis Summary
+                      </h3>
+                      <p className="text-slate-600 leading-relaxed">
+                        {results[0].seasonality.summary}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Peak Months */}
+                      <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-6">
+                        <h3 className="text-sm font-bold text-emerald-800 uppercase mb-4">Peak Interest</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {results[0].seasonality.peakMonths.map((m, i) => (
+                            <span key={i} className="px-3 py-1 bg-white text-emerald-700 rounded-full text-sm font-medium shadow-sm border border-emerald-100">
+                              {m}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Low Months */}
+                      <div className="bg-slate-50 rounded-xl border border-slate-200 p-6">
+                        <h3 className="text-sm font-bold text-slate-600 uppercase mb-4">Low Interest</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {results[0].seasonality.lowMonths.map((m, i) => (
+                            <span key={i} className="px-3 py-1 bg-white text-slate-500 rounded-full text-sm font-medium shadow-sm border border-slate-200">
+                              {m}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    {results.map((result, index) => (
-                      <div key={index} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                          <h3 className="font-bold text-slate-900 truncate max-w-[300px]" title={result.url}>
-                            {result.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
-                          </h3>
-                          <button
-                            onClick={() => result.status === 'success' && handleCopy(result.keywords, index)}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                          >
-                            {copiedIndex === index ? (
-                              <>
-                                <Icons.Check /> Copied
-                              </>
-                            ) : (
-                              'Copy Keywords'
-                            )}
-                          </button>
+                    {/* Trends & Insights */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                        <h3 className="font-bold text-slate-900 mb-4">Seasonal Trends</h3>
+                        <div className="space-y-4">
+                          {results[0].seasonality.trends.map((trend, i) => (
+                            <div key={i} className="pb-4 border-b border-slate-100 last:border-0 last:pb-0">
+                              <div className="text-sm font-bold text-blue-600 mb-1">{trend.period}</div>
+                              <p className="text-sm text-slate-600">{trend.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                        <h3 className="font-bold text-slate-900 mb-4">Key Insights</h3>
+                        <ul className="space-y-3">
+                          {results[0].seasonality.insights.map((insight, i) => (
+                            <li key={i} className="flex gap-3 text-sm text-slate-600">
+                              <span className="text-blue-500 mt-1">•</span>
+                              {insight}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Configuration Card (Dashboard/Expander) */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Campaign Focus</label>
+                        <input
+                          type="text"
+                          value={focus}
+                          onChange={(e) => setFocus(e.target.value)}
+                          placeholder="e.g. Sell Winter Jackets"
+                          className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Target Audience</label>
+                        <input
+                          type="text"
+                          value={audience}
+                          onChange={(e) => setAudience(e.target.value)}
+                          placeholder="e.g. Outdoor enthusiasts"
+                          className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Target Region</label>
+                          <input
+                            type="text"
+                            value={region}
+                            onChange={(e) => setRegion(e.target.value)}
+                            placeholder="e.g. UK, USA, Global"
+                            className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Timeframe/Season</label>
+                          <input
+                            type="text"
+                            value={timeframe}
+                            onChange={(e) => setTimeframe(e.target.value)}
+                            placeholder="e.g. Q4, Christmas"
+                            className="w-full p-2 rounded border border-slate-200 text-sm focus:border-blue-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={loading || (activeTab === 'expander' ? !seedKeywords.trim() : !urls.trim())}
+                    className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-lg shadow-blue-500/20 transition-all
+                        ${loading || (activeTab === 'expander' ? !seedKeywords.trim() : !urls.trim())
+                        ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/40 active:scale-[0.98]'
+                      }`}
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {activeTab === 'expander' ? 'Expanding Keywords...' : 'Analyzing Sources...'}
+                      </span>
+                    ) : (
+                      activeTab === 'expander' ? 'Expand Keywords' : 'Analyze Sources'
+                    )}
+                  </button>
+                </div>
+
+                {/* Input & Results Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+                  {/* Input Column */}
+                  <div className="lg:col-span-1">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-full flex flex-col">
+                      <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="font-bold text-slate-900">
+                          {activeTab === 'expander' ? 'Seed Keywords' : 'Input Sources'}
+                        </h3>
+                        <span
+                          className="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-700"
+                          onClick={() => activeTab === 'expander' ? setSeedKeywords('') : setUrls('')}
+                        >
+                          Clear All
+                        </span>
+                      </div>
+                      <div className="p-4 flex-1">
+                        {activeTab === 'expander' ? (
+                          <textarea
+                            value={seedKeywords}
+                            onChange={(e) => setSeedKeywords(e.target.value)}
+                            placeholder="Enter seed keywords (one per line)..."
+                            className="w-full h-full min-h-[300px] p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm font-mono text-slate-600"
+                          />
+                        ) : (
+                          <textarea
+                            value={urls}
+                            onChange={(e) => setUrls(e.target.value)}
+                            placeholder="Paste URLs here (one per line)..."
+                            className="w-full h-full min-h-[300px] p-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm font-mono text-slate-600"
+                          />
+                        )}
+                      </div>
+                      {error && (
+                        <div className="p-4 bg-red-50 border-t border-red-100 text-red-600 text-sm">
+                          {error}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Results Columns */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {results.length > 0 ? (
+                      <section className="space-y-6">
+                        {/* Filter Buttons */}
+                        <div className="flex items-center gap-2 bg-white rounded-lg border border-slate-200 p-2 shadow-sm">
+                          <Icons.Filter />
+                          <span className="text-sm font-medium text-slate-600">Filter by stage:</span>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => setFunnelFilter('all')}
+                              className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'all'
+                                ? 'bg-slate-900 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                            >
+                              All
+                            </button>
+                            <button
+                              onClick={() => setFunnelFilter('awareness')}
+                              className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'awareness'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                }`}
+                            >
+                              Awareness
+                            </button>
+                            <button
+                              onClick={() => setFunnelFilter('consideration')}
+                              className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'consideration'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                                }`}
+                            >
+                              Consideration
+                            </button>
+                            <button
+                              onClick={() => setFunnelFilter('conversion')}
+                              className={`px-3 py-1 text-xs font-medium rounded transition-all ${funnelFilter === 'conversion'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-green-50 text-green-600 hover:bg-green-100'
+                                }`}
+                            >
+                              Conversion
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="p-0">
-                          {result.status === 'success' ? (
-                            <div>
-                              {/* Keywords Table */}
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                  <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
-                                    <tr>
-                                      <th className="px-4 py-3 font-medium">Keyword</th>
-                                      <th className="px-4 py-3 font-medium">Match Type</th>
-                                      <th className="px-4 py-3 font-medium">Funnel Stage</th>
-                                      <th className="px-4 py-3 font-medium">Est. Volume</th>
-                                      <th className="px-4 py-3 font-medium w-16"></th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-slate-100">
-                                    {getFilteredKeywords(result.keywords, index).map((k, i) => (
-                                      <tr key={i} className="hover:bg-slate-50/50">
-                                        <td className="px-4 py-2 font-medium text-slate-900">
-                                          {formatKeyword(k.keyword, matchType)}
-                                        </td>
-                                        <td className="px-4 py-2 text-slate-500">
-                                          {matchType.charAt(0).toUpperCase() + matchType.slice(1)}
-                                        </td>
-                                        <td className="px-4 py-2">
-                                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${k.funnelStage.toLowerCase().includes('awareness') ? 'bg-blue-100 text-blue-700' :
-                                            k.funnelStage.toLowerCase().includes('consideration') ? 'bg-purple-100 text-purple-700' :
-                                              'bg-green-100 text-green-700'
-                                            }`}>
-                                            {k.funnelStage}
-                                          </span>
-                                        </td>
-                                        <td className="px-4 py-2">
-                                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${k.volumePotential?.toLowerCase() === 'high' ? 'bg-emerald-100 text-emerald-700' :
-                                            k.volumePotential?.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                              'bg-slate-100 text-slate-600'
-                                            }`}>
-                                            {k.volumePotential || 'N/A'}
-                                          </span>
-                                        </td>
-                                        <td className="px-4 py-2">
-                                          <button
-                                            onClick={() => handleRemoveKeyword(index, k.keyword)}
-                                            className="text-red-400 hover:text-red-600 transition-colors"
-                                            title="Remove keyword"
-                                          >
-                                            <Icons.Trash />
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
+                        {results.map((result, index) => (
+                          <div key={index} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                              <h3 className="font-bold text-slate-900 truncate max-w-[300px]" title={result.url}>
+                                {result.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                              </h3>
+                              <button
+                                onClick={() => result.status === 'success' && handleCopy(result.keywords, index)}
+                                className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                              >
+                                {copiedIndex === index ? (
+                                  <>
+                                    <Icons.Check /> Copied
+                                  </>
+                                ) : (
+                                  'Copy Keywords'
+                                )}
+                              </button>
+                            </div>
 
-                              {/* Negative Keywords Section */}
-                              {result.negativeKeywords.length > 0 && (
-                                <div className="p-4 border-t border-slate-100 bg-red-50/10">
-                                  <h4 className="text-xs font-bold text-red-600 uppercase mb-2">Negative Keywords (Exclusions)</h4>
-                                  <div className="flex flex-wrap gap-2">
-                                    {result.negativeKeywords.map((nk, i) => (
-                                      <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600 border border-red-100">
-                                        {nk}
-                                      </span>
-                                    ))}
+                            <div className="p-0">
+                              {result.status === 'success' ? (
+                                <div>
+                                  {/* Keywords Table */}
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                      <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                                        <tr>
+                                          <th className="px-4 py-3 font-medium">Keyword</th>
+                                          <th className="px-4 py-3 font-medium">Match Type</th>
+                                          <th className="px-4 py-3 font-medium">Funnel Stage</th>
+                                          <th className="px-4 py-3 font-medium">Est. Volume</th>
+                                          <th className="px-4 py-3 font-medium w-16"></th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-slate-100">
+                                        {getFilteredKeywords(result.keywords, index).map((k, i) => (
+                                          <tr key={i} className="hover:bg-slate-50/50">
+                                            <td className="px-4 py-2 font-medium text-slate-900">
+                                              {formatKeyword(k.keyword, matchType)}
+                                            </td>
+                                            <td className="px-4 py-2 text-slate-500">
+                                              {matchType.charAt(0).toUpperCase() + matchType.slice(1)}
+                                            </td>
+                                            <td className="px-4 py-2">
+                                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${k.funnelStage.toLowerCase().includes('awareness') ? 'bg-blue-100 text-blue-700' :
+                                                k.funnelStage.toLowerCase().includes('consideration') ? 'bg-purple-100 text-purple-700' :
+                                                  'bg-green-100 text-green-700'
+                                                }`}>
+                                                {k.funnelStage}
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-2">
+                                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${k.volumePotential?.toLowerCase() === 'high' ? 'bg-emerald-100 text-emerald-700' :
+                                                k.volumePotential?.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                  'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                {k.volumePotential || 'N/A'}
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-2">
+                                              <button
+                                                onClick={() => handleRemoveKeyword(index, k.keyword)}
+                                                className="text-red-400 hover:text-red-600 transition-colors"
+                                                title="Remove keyword"
+                                              >
+                                                <Icons.Trash />
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
                                   </div>
+
+                                  {/* Negative Keywords Section */}
+                                  {result.negativeKeywords.length > 0 && (
+                                    <div className="p-4 border-t border-slate-100 bg-red-50/10">
+                                      <h4 className="text-xs font-bold text-red-600 uppercase mb-2">Negative Keywords (Exclusions)</h4>
+                                      <div className="flex flex-wrap gap-2">
+                                        {result.negativeKeywords.map((nk, i) => (
+                                          <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600 border border-red-100">
+                                            {nk}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center h-32 text-red-500 text-sm text-center p-4">
+                                  <span className="font-medium">Analysis Failed</span>
+                                  <span className="text-xs text-red-400 mt-1">{result.error}</span>
                                 </div>
                               )}
                             </div>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center h-32 text-red-500 text-sm text-center p-4">
-                              <span className="font-medium">Analysis Failed</span>
-                              <span className="text-xs text-red-400 mt-1">{result.error}</span>
-                            </div>
-                          )}
-                        </div>
+                          </div>
+                        ))}
+                      </section>
+                    ) : (
+                      <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                        <Icons.Search />
+                        <p className="mt-2 text-sm font-medium">No results yet</p>
+                        <p className="text-xs">Enter URLs and click Analyze to see keywords</p>
                       </div>
-                    ))}
-                  </section>
-                ) : (
-                  <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                    <Icons.Search />
-                    <p className="mt-2 text-sm font-medium">No results yet</p>
-                    <p className="text-xs">Enter URLs and click Analyze to see keywords</p>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </main>
