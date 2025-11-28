@@ -17,6 +17,7 @@ interface AnalysisResult {
     summary: string;
     peakMonths: string[];
     lowMonths: string[];
+    monthlyInterest: { month: string; score: number }[];
     trends: { period: string; description: string }[];
     insights: string[];
   };
@@ -488,6 +489,30 @@ export default function Home() {
                         {results[0].seasonality.summary}
                       </p>
                     </div>
+
+                    {/* Monthly Interest Chart */}
+                    {results[0].seasonality.monthlyInterest && (
+                      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                        <h3 className="text-lg font-bold text-slate-900 mb-6">Monthly Interest Trend</h3>
+                        <div className="h-64 flex items-end justify-between gap-2">
+                          {results[0].seasonality.monthlyInterest.map((item, i) => (
+                            <div key={i} className="flex flex-col items-center gap-2 flex-1 group">
+                              <div className="relative w-full flex justify-center items-end h-48 bg-slate-50 rounded-t-lg overflow-hidden">
+                                <div
+                                  className="w-full mx-1 bg-blue-500 rounded-t transition-all duration-500 group-hover:bg-blue-600 relative"
+                                  style={{ height: `${item.score}%` }}
+                                >
+                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                    {item.score}/100
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-xs font-medium text-slate-500">{item.month}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Peak Months */}

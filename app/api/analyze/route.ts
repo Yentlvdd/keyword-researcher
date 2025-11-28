@@ -16,6 +16,7 @@ interface AnalysisResult {
         summary: string;
         peakMonths: string[];
         lowMonths: string[];
+        monthlyInterest: { month: string; score: number }[];
         trends: { period: string; description: string }[];
         insights: string[];
     };
@@ -214,8 +215,8 @@ Focus Topic/Keywords: ${focus}
 Additional Context: ${context || 'None'}
 
 The Task:
-Please analyze the seasonality and trends for the provided focus topic, specifically looking at the requested "Seasonality Type".
-Provide a detailed breakdown of when interest peaks, when it drops, and specific behavioral patterns.
+Please analyze the seasonality and trends for the provided focus topic.
+Provide a detailed breakdown including a month-by-month interest score (0-100) to visualize the trend.
 
 Output Format:
 Return a JSON object with the following structure:
@@ -224,6 +225,20 @@ Return a JSON object with the following structure:
     "summary": "A brief 2-3 sentence summary of the overall trend.",
     "peakMonths": ["Month 1", "Month 2"],
     "lowMonths": ["Month 1", "Month 2"],
+    "monthlyInterest": [
+      { "month": "Jan", "score": 45 },
+      { "month": "Feb", "score": 50 },
+      { "month": "Mar", "score": 60 },
+      { "month": "Apr", "score": 70 },
+      { "month": "May", "score": 80 },
+      { "month": "Jun", "score": 90 },
+      { "month": "Jul", "score": 95 },
+      { "month": "Aug", "score": 85 },
+      { "month": "Sep", "score": 75 },
+      { "month": "Oct", "score": 65 },
+      { "month": "Nov", "score": 55 },
+      { "month": "Dec", "score": 40 }
+    ],
     "trends": [
       { "period": "e.g. Q4 / Winter", "description": "Specific behavior or trend details..." },
       { "period": "e.g. Summer", "description": "..." }
