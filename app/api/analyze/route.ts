@@ -12,6 +12,13 @@ interface AnalysisResult {
     url: string;
     keywords: KeywordData[];
     negativeKeywords: string[];
+    seasonality?: {
+        summary: string;
+        peakMonths: string[];
+        lowMonths: string[];
+        trends: { period: string; description: string }[];
+        insights: string[];
+    };
     status: 'success' | 'failed';
     error?: string;
 }
